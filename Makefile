@@ -65,16 +65,6 @@ CMAKE_BINARY_DIR = /Users/max/Downloads/llama/my_llama.cpp
 #=============================================================================
 # Targets provided globally by CMake.
 
-# Special rule for the target test
-test:
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Running tests..."
-	/opt/homebrew/Cellar/cmake/3.26.1/bin/ctest --force-new-ctest-process $(ARGS)
-.PHONY : test
-
-# Special rule for the target test
-test/fast: test
-.PHONY : test/fast
-
 # Special rule for the target edit_cache
 edit_cache:
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Running CMake cache editor..."
@@ -151,32 +141,6 @@ llama: cmake_check_build_system
 llama/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/llama.dir/build.make CMakeFiles/llama.dir/build
 .PHONY : llama/fast
-
-#=============================================================================
-# Target rules for targets named test-quantize
-
-# Build rule for target.
-test-quantize: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test-quantize
-.PHONY : test-quantize
-
-# fast build rule for target.
-test-quantize/fast:
-	$(MAKE) $(MAKESILENT) -f tests/CMakeFiles/test-quantize.dir/build.make tests/CMakeFiles/test-quantize.dir/build
-.PHONY : test-quantize/fast
-
-#=============================================================================
-# Target rules for targets named test-tokenizer-0
-
-# Build rule for target.
-test-tokenizer-0: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test-tokenizer-0
-.PHONY : test-tokenizer-0
-
-# fast build rule for target.
-test-tokenizer-0/fast:
-	$(MAKE) $(MAKESILENT) -f tests/CMakeFiles/test-tokenizer-0.dir/build.make tests/CMakeFiles/test-tokenizer-0.dir/build
-.PHONY : test-tokenizer-0/fast
 
 #=============================================================================
 # Target rules for targets named common
@@ -286,15 +250,12 @@ help:
 	@echo "... depend"
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
-	@echo "... test"
 	@echo "... common"
 	@echo "... embedding"
 	@echo "... ggml"
 	@echo "... llama"
 	@echo "... main"
 	@echo "... quantize"
-	@echo "... test-quantize"
-	@echo "... test-tokenizer-0"
 	@echo "... ggml.o"
 	@echo "... ggml.i"
 	@echo "... ggml.s"

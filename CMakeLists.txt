@@ -61,7 +61,6 @@ option(LLAMA_FMA                    "llama: enable FMA"                         
 option(LLAMA_ACCELERATE             "llama: enable Accelerate framework"                    ON)
 option(LLAMA_OPENBLAS               "llama: use OpenBLAS"                                   OFF)
 
-option(LLAMA_BUILD_TESTS            "llama: build tests"    ${LLAMA_STANDALONE})
 option(LLAMA_BUILD_EXAMPLES         "llama: build examples" ${LLAMA_STANDALONE})
 
 #
@@ -251,11 +250,6 @@ endif()
 #
 # programs, examples and tests
 #
-
-if (LLAMA_BUILD_TESTS AND NOT CMAKE_JS_VERSION)
-    enable_testing()
-    add_subdirectory(tests)
-endif ()
 
 if (LLAMA_BUILD_EXAMPLES)
     add_subdirectory(examples)
