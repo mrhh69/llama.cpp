@@ -190,10 +190,6 @@ int main(int argc, char ** argv) {
   std::string prompt = "tell me about alpacas";
   std::string prompt2 = "do I have rizz?";
 
-	// Add a space in front of the first character to match OG llama tokenizer behavior
-	//prompt.insert(0, 1, ' ');
-  //prompt2.insert(0, 1, ' ');
-
 
   process(ctx, params, inp_pfx, inp_sfx, prompt);
 
