@@ -23,9 +23,6 @@ int main(int argc, char ** argv) {
     fprintf(stderr, "%s: seed = %d\n", __func__, params.seed);
 
     std::mt19937 rng(params.seed);
-    if (params.random_prompt) {
-        params.prompt = gpt_random_prompt(rng);
-    }
 
     llama_context * ctx;
 
@@ -37,7 +34,7 @@ int main(int argc, char ** argv) {
         lparams.n_parts    = params.n_parts;
         lparams.seed       = params.seed;
         lparams.f16_kv     = params.memory_f16;
-        lparams.logits_all = params.perplexity;
+        //lparams.logits_all = params.perplexity;
         lparams.use_mlock  = params.use_mlock;
         lparams.embedding  = params.embedding;
 
@@ -58,24 +55,17 @@ int main(int argc, char ** argv) {
 
     int n_past = 0;
 
+    std::string prompt = "do I have rizz?";
+
     // Add a space in front of the first character to match OG llama tokenizer behavior
-    params.prompt.insert(0, 1, ' ');
+    prompt.insert(0, 1, ' ');
 
     // tokenize the prompt
-    auto embd_inp = ::llama_tokenize(ctx, params.prompt, true);
+    auto embd_inp = ::llama_tokenize(ctx, prompt, true);
 
     // determine newline token
     auto llama_token_newline = ::llama_tokenize(ctx, "\n", false);
 
-    if (params.verbose_prompt) {
-        fprintf(stderr, "\n");
-        fprintf(stderr, "%s: prompt: '%s'\n", __func__, params.prompt.c_str());
-        fprintf(stderr, "%s: number of tokens in prompt = %zu\n", __func__, embd_inp.size());
-        for (int i = 0; i < (int) embd_inp.size(); i++) {
-            fprintf(stderr, "%6d -> '%s'\n", embd_inp[i], llama_token_to_str(ctx, embd_inp[i]));
-        }
-        fprintf(stderr, "\n");
-    }
 
     if (params.embedding){
         if (embd_inp.size() > 0) {

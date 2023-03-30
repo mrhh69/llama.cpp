@@ -14,10 +14,22 @@
 
 
 
-void process(llama_context * ctx, gpt_params params, std::string prompt) {
+void process (
+	llama_context * ctx,
+	gpt_params params,
+	std::vector<llama_token> inp_pfx,
+	std::vector<llama_token> inp_sfx,
+	std::string prompt
+) {
 
 	// tokenize the prompt
-	auto embd_inp = ::llama_tokenize(ctx, prompt, true);
+	auto embd_inp = ::llama_tokenize(ctx, prompt, false);
+	// insert prefix/suffix
+	embd_inp.insert(embd_inp.begin(), inp_pfx.begin(), inp_pfx.end());
+	embd_inp.insert(embd_inp.end(), inp_sfx.begin(), inp_sfx.end());
+
+
+
 
 	const int n_ctx = llama_n_ctx(ctx);
 
@@ -25,13 +37,6 @@ void process(llama_context * ctx, gpt_params params, std::string prompt) {
 		fprintf(stderr, "%s: error: prompt is too long (%d tokens, max %d)\n", __func__, (int) embd_inp.size(), n_ctx - 4);
 		exit(1);
 	}
-
-
-  /*
-	// prefix & suffix for instruct mode
-	const auto inp_pfx = ::llama_tokenize(ctx, "Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:\n\n", true);
-	const auto inp_sfx = ::llama_tokenize(ctx, "\n\n### Response:\n\n", false);
-  */
 
 	// TODO: replace with ring-buffer
 	std::vector<llama_token> last_n_tokens(n_ctx);
@@ -175,21 +180,26 @@ int main(int argc, char ** argv) {
 
 
 
+	// prefix & suffix for instruct mode
+	const auto inp_pfx = ::llama_tokenize(ctx, " Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:\n", true);
+	const auto inp_sfx = ::llama_tokenize(ctx, "\n\n### Response:\n", false);
+
+
   /* HERE: I am going to add the server part, and then each request has a new prompt */
 
-  std::string prompt = "Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:\ntell me about alpacas\n\n### Response:\n";
-  std::string prompt2 = "Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:\ndo I have rizz?\n\n### Response:\n";
+  std::string prompt = "tell me about alpacas";
+  std::string prompt2 = "do I have rizz?";
 
 	// Add a space in front of the first character to match OG llama tokenizer behavior
-	prompt.insert(0, 1, ' ');
-  prompt2.insert(0, 1, ' ');
+	//prompt.insert(0, 1, ' ');
+  //prompt2.insert(0, 1, ' ');
 
 
-  process(ctx, params, prompt);
+  process(ctx, params, inp_pfx, inp_sfx, prompt);
 
   printf("\n\nnext\n\n");
 
-  process(ctx, params, prompt2);
+  process(ctx, params, inp_pfx, inp_sfx, prompt2);
 
 
 

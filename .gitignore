@@ -1,40 +1,14 @@
 *.o
 *.a
-.cache/
-.vs/
-.vscode/
 .DS_Store
-
-.build/
-build/
-build-em/
-build-debug/
-build-release/
-build-static/
-build-no-accel/
-build-sanitize-addr/
-build-sanitize-thread/
 
 models/*
 
-/main
-/quantize
-/result
-/perplexity
-/embedding
+bin/*
 
-arm_neon.h
 compile_commands.json
 
-.envrc
-.direnv/
-
-.venv
-__pycache__
-.swiftpm
-
 CMakeFiles/
-bin/*
 *.cmake
 CMakeCache.txt
 Makefile
