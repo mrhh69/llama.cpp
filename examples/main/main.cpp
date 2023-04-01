@@ -1,6 +1,8 @@
 #include "common.h"
 #include "llama.h"
 
+#include "server.h"
+
 #include <cassert>
 #include <cinttypes>
 #include <cmath>
@@ -10,43 +12,20 @@
 #include <iostream>
 #include <string>
 #include <vector>
-#include <unistd.h>
-#include <signal.h>
-
-#include <sys/select.h>
-
-#include "ws.h"
 
 
-ws_cli_conn_t *cur_client;
-int cur_pid;
-int cur_pipe[2];
+static llama_context * ctx;
+static gpt_params params;
+static std::vector<llama_token> inp_pfx; // prefix & suffix for instruct mode
+static std::vector<llama_token> inp_sfx;
 
 
-llama_context * ctx;
-gpt_params params;
-std::vector<llama_token> inp_pfx;
-std::vector<llama_token> inp_sfx;
-// prefix & suffix for instruct mode
-
-void new_token_str(const char *s) {
-	//printf("%s", s);
-	//fflush(stdout);
-	char c = 1;
-	write(cur_pipe[1], &c, 1);
-	write(cur_pipe[1], s, strlen(s) + 1);
-	//if (cur_client == NULL) {printf("no client???"); return;}
-	//ws_sendframe_txt(cur_client, s);
-}
 
 
 void process (
-	llama_context * ctx,
-	gpt_params params,
-	std::vector<llama_token> inp_pfx,
-	std::vector<llama_token> inp_sfx,
-	std::string prompt
+	char *s
 ) {
+	std::string prompt = std::string(s);
 
 	// tokenize the prompt
 	auto embd_inp = ::llama_tokenize(ctx, prompt, false);
@@ -155,85 +134,8 @@ void process (
 			break;
 		}
   }
-	/* tell that done */
-	char c = 2;
-	write(cur_pipe[1], &c, 1);
-	close(cur_pipe[1]);
 }
 
-
-
-
-void onopen(ws_cli_conn_t *client) {
-	if (cur_client) {
-		ws_sendframe_txt(client, "busy");
-		ws_close_client(client);
-	}
-	else {
-		printf("opened!\n");
-		cur_client = client;
-		ws_sendframe_txt(client, "ok");
-	}
-}
-void onclose(ws_cli_conn_t *client) {
-	printf("closed...\n");
-	if (cur_pipe[0]) close(cur_pipe[0]);
-}
-void onmessage(ws_cli_conn_t *client, const unsigned char *msg, uint64_t size, int type) {
-	//printf("message!! (%i)\n", type);
-	if (cur_client == client) {
-		if (!cur_pid) {
-			printf("prompt: '%s'\n", msg);
-			std::string prompt = std::string((char *)msg);
-			pipe(cur_pipe);
-			if ((cur_pid = fork()) == 0) {
-				close(cur_pipe[0]);
-				process(ctx, params, inp_pfx, inp_sfx, prompt);
-				exit(0);
-			}
-			close(cur_pipe[1]);
-			cur_pipe[1] = 0;
-		}
-		else {
-			//printf("ping (kinda)!\n");
-			if (cur_client) {
-				/* try read from pipe here */
-				fd_set set;
-				struct timeval tv = {0, 0};
-				for (;;) {
-					FD_ZERO(&set);
-					FD_SET(cur_pipe[0], &set);
-					if (select(FD_SETSIZE, &set, NULL, NULL, &tv) == -1) {printf("select\n"); exit(1);}
-					if ((FD_ISSET(cur_pipe[0], &set))) {
-						/* fd's ready */
-						char c, buf[256];
-						read(cur_pipe[0], &c, 1);
-						//printf("cmd:%u\n", c);
-						if (c == 1) {
-							int i = 0;
-							do {
-								read(cur_pipe[0], &buf[i], 1);
-							} while (buf[i++]);
-							//printf("%s\n", buf);
-							ws_sendframe_txt(cur_client, &buf[0]);
-						}
-						else if (c == 2) {
-							printf("done!\n");
-							ws_close_client(cur_client);
-							cur_client = 0;
-							close(cur_pipe[0]);
-							cur_pipe[0] = 0;
-							kill(cur_pid, SIGKILL);
-							cur_pid = 0;
-							return;
-						}
-					}
-					else break;
-				}
-			}
-		}
-	}
-}
 
 
 int main(int argc, char ** argv) {
@@ -281,14 +183,8 @@ int main(int argc, char ** argv) {
 	inp_pfx = ::llama_tokenize(ctx, " Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:\n", true);
 	inp_sfx = ::llama_tokenize(ctx, "\n\n### Response:\n", false);
 
-
-	struct ws_events evs;
-  evs.onopen    = &onopen;
-  evs.onclose   = &onclose;
-  evs.onmessage = &onmessage;
-
 	/* infinite server loop */
-	ws_socket(&evs, 3002, 0, -1);
+	server_loop();
 
 
 	llama_free(ctx);

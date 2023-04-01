@@ -1,5 +1,4 @@
 set(TARGET main)
-add_executable(${TARGET} main.cpp)
-target_link_libraries(${TARGET} PRIVATE common llama ${CMAKE_THREAD_LIBS_INIT} ${CMAKE_SOURCE_DIR}/wsServer/libws.a)
-target_include_directories(${TARGET} PRIVATE ${CMAKE_SOURCE_DIR}/wsServer/include/)
+add_executable(${TARGET} main.cpp server.c)
+target_link_libraries(${TARGET} PRIVATE common llama ${CMAKE_THREAD_LIBS_INIT})
 target_compile_features(${TARGET} PRIVATE cxx_std_11)
