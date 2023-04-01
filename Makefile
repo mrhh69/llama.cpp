@@ -181,19 +181,6 @@ quantize/fast:
 	$(MAKE) $(MAKESILENT) -f examples/quantize/CMakeFiles/quantize.dir/build.make examples/quantize/CMakeFiles/quantize.dir/build
 .PHONY : quantize/fast
 
-#=============================================================================
-# Target rules for targets named embedding
-
-# Build rule for target.
-embedding: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 embedding
-.PHONY : embedding
-
-# fast build rule for target.
-embedding/fast:
-	$(MAKE) $(MAKESILENT) -f examples/embedding/CMakeFiles/embedding.dir/build.make examples/embedding/CMakeFiles/embedding.dir/build
-.PHONY : embedding/fast
-
 ggml.o: ggml.c.o
 .PHONY : ggml.o
 
@@ -251,7 +238,6 @@ help:
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
 	@echo "... common"
-	@echo "... embedding"
 	@echo "... ggml"
 	@echo "... llama"
 	@echo "... main"
