@@ -11,7 +11,33 @@
 #include <string>
 #include <vector>
 #include <unistd.h>
+#include <signal.h>
 
+#include <sys/select.h>
+
+#include "ws.h"
+
+
+ws_cli_conn_t *cur_client;
+int cur_pid;
+int cur_pipe[2];
+
+
+llama_context * ctx;
+gpt_params params;
+std::vector<llama_token> inp_pfx;
+std::vector<llama_token> inp_sfx;
+// prefix & suffix for instruct mode
+
+void new_token_str(const char *s) {
+	//printf("%s", s);
+	//fflush(stdout);
+	char c = 1;
+	write(cur_pipe[1], &c, 1);
+	write(cur_pipe[1], s, strlen(s) + 1);
+	//if (cur_client == NULL) {printf("no client???"); return;}
+	//ws_sendframe_txt(cur_client, s);
+}
 
 
 void process (
@@ -116,7 +142,8 @@ void process (
 		// display text
 		if (!input_noecho) {
 			for (auto id : embd) {
-				printf("%s", llama_token_to_str(ctx, id));
+				new_token_str(llama_token_to_str(ctx, id));
+				//printf("%s", llama_token_to_str(ctx, id));
 			}
 			fflush(stdout);
 		}
@@ -124,16 +151,92 @@ void process (
 		// end of text token
 		if (embd.back() == llama_token_eos()) {
       /* die here */
-			fprintf(stderr, " [end of text]\n");
+			//fprintf(stderr, " [end of text]\n");
 			break;
 		}
   }
+	/* tell that done */
+	char c = 2;
+	write(cur_pipe[1], &c, 1);
+	close(cur_pipe[1]);
 }
 
 
 
+
+void onopen(ws_cli_conn_t *client) {
+	if (cur_client) {
+		ws_sendframe_txt(client, "busy");
+		ws_close_client(client);
+	}
+	else {
+		printf("opened!\n");
+		cur_client = client;
+		ws_sendframe_txt(client, "ok");
+	}
+}
+void onclose(ws_cli_conn_t *client) {
+	printf("closed...\n");
+	if (cur_pipe[0]) close(cur_pipe[0]);
+}
+void onmessage(ws_cli_conn_t *client, const unsigned char *msg, uint64_t size, int type) {
+	//printf("message!! (%i)\n", type);
+	if (cur_client == client) {
+		if (!cur_pid) {
+			printf("prompt: '%s'\n", msg);
+			std::string prompt = std::string((char *)msg);
+			pipe(cur_pipe);
+			if ((cur_pid = fork()) == 0) {
+				close(cur_pipe[0]);
+				process(ctx, params, inp_pfx, inp_sfx, prompt);
+				exit(0);
+			}
+			close(cur_pipe[1]);
+			cur_pipe[1] = 0;
+		}
+		else {
+			//printf("ping (kinda)!\n");
+			if (cur_client) {
+				/* try read from pipe here */
+				fd_set set;
+				struct timeval tv = {0, 0};
+				for (;;) {
+					FD_ZERO(&set);
+					FD_SET(cur_pipe[0], &set);
+					if (select(FD_SETSIZE, &set, NULL, NULL, &tv) == -1) {printf("select\n"); exit(1);}
+					if ((FD_ISSET(cur_pipe[0], &set))) {
+						/* fd's ready */
+						char c, buf[256];
+						read(cur_pipe[0], &c, 1);
+						//printf("cmd:%u\n", c);
+						if (c == 1) {
+							int i = 0;
+							do {
+								read(cur_pipe[0], &buf[i], 1);
+							} while (buf[i++]);
+							//printf("%s\n", buf);
+							ws_sendframe_txt(cur_client, &buf[0]);
+						}
+						else if (c == 2) {
+							printf("done!\n");
+							ws_close_client(cur_client);
+							cur_client = 0;
+							close(cur_pipe[0]);
+							cur_pipe[0] = 0;
+							kill(cur_pid, SIGKILL);
+							cur_pid = 0;
+							return;
+						}
+					}
+					else break;
+				}
+			}
+		}
+	}
+}
+
+
 int main(int argc, char ** argv) {
-	gpt_params params;
 	params.model = "models/llama-7B/ggml-model.bin";
 
 	if (gpt_params_parse(argc, argv, params) == false) {
@@ -149,9 +252,6 @@ int main(int argc, char ** argv) {
 	if (params.seed <= 0) {
 		params.seed = time(NULL);
 	}
-
-
-	llama_context * ctx;
 
 	// load the model
 	{
@@ -178,25 +278,17 @@ int main(int argc, char ** argv) {
 				params.n_threads, std::thread::hardware_concurrency(), llama_print_system_info());
 	}
 
+	inp_pfx = ::llama_tokenize(ctx, " Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:\n", true);
+	inp_sfx = ::llama_tokenize(ctx, "\n\n### Response:\n", false);
 
 
-	// prefix & suffix for instruct mode
-	const auto inp_pfx = ::llama_tokenize(ctx, " Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:\n", true);
-	const auto inp_sfx = ::llama_tokenize(ctx, "\n\n### Response:\n", false);
+	struct ws_events evs;
+  evs.onopen    = &onopen;
+  evs.onclose   = &onclose;
+  evs.onmessage = &onmessage;
 
-
-  /* HERE: I am going to add the server part, and then each request has a new prompt */
-
-  std::string prompt = "tell me about alpacas";
-  std::string prompt2 = "do I have rizz?";
-
-
-  process(ctx, params, inp_pfx, inp_sfx, prompt);
-
-  printf("\n\nnext\n\n");
-
-  process(ctx, params, inp_pfx, inp_sfx, prompt2);
-
+	/* infinite server loop */
+	ws_socket(&evs, 3002, 0, -1);
 
 
 	llama_free(ctx);

@@ -12,3 +12,5 @@ CMakeFiles/
 *.cmake
 CMakeCache.txt
 Makefile
+
+wsServer/
