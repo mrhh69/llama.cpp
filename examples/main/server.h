@@ -15,6 +15,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
 extern void new_token_str(const char *);
 extern void server_loop(void);
 extern void process(char *);
