@@ -22,10 +22,35 @@ static std::vector<llama_token> inp_sfx;
 
 
 
+static void model_load () {
+	auto lparams = llama_context_default_params();
+
+	lparams.n_ctx	  = params.n_ctx;
+	lparams.n_parts	= params.n_parts;
+	lparams.seed	   = params.seed;
+	lparams.f16_kv	 = params.memory_f16;
+	lparams.use_mlock  = params.use_mlock;
+
+	ctx = llama_init_from_file(params.model.c_str(), lparams);
+
+	if (ctx == NULL) {
+		fprintf(stderr, "%s: error: failed to load model '%s'\n", __func__, params.model.c_str());
+		exit(1);
+	}
+
+	inp_pfx = ::llama_tokenize(ctx, " Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:\n", true);
+	inp_sfx = ::llama_tokenize(ctx, "\n\n### Response:\n", false);
+}
+
+
 void process (
 	char *s
 ) {
 	std::string prompt = std::string(s);
+
+	if (params.always_reload) {
+		model_load();
+	}
 
 	// tokenize the prompt
 	auto embd_inp = ::llama_tokenize(ctx, prompt, false);
@@ -156,21 +181,8 @@ int main(int argc, char ** argv) {
 	}
 
 	// load the model
-	{
-		auto lparams = llama_context_default_params();
-
-		lparams.n_ctx	  = params.n_ctx;
-		lparams.n_parts	= params.n_parts;
-		lparams.seed	   = params.seed;
-		lparams.f16_kv	 = params.memory_f16;
-		lparams.use_mlock  = params.use_mlock;
-
-		ctx = llama_init_from_file(params.model.c_str(), lparams);
-
-		if (ctx == NULL) {
-			fprintf(stderr, "%s: error: failed to load model '%s'\n", __func__, params.model.c_str());
-			return 1;
-		}
+	if (!params.always_reload) {
+		model_load();
 	}
 
 	// print system information
@@ -179,9 +191,6 @@ int main(int argc, char ** argv) {
 		fprintf(stderr, "system_info: n_threads = %d / %d | %s\n",
 				params.n_threads, std::thread::hardware_concurrency(), llama_print_system_info());
 	}
-
-	inp_pfx = ::llama_tokenize(ctx, " Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:\n", true);
-	inp_sfx = ::llama_tokenize(ctx, "\n\n### Response:\n", false);
 
 	/* infinite server loop */
 	server_loop();

@@ -35,6 +35,8 @@ struct gpt_params {
     bool embedding         = false; // get only sentence embedding
 
     bool use_mlock         = false; // use mlock to keep model in memory
+
+    bool always_reload     = false; // load ctx within the request handler, rather than at server start
 };
 
 bool gpt_params_parse(int argc, char ** argv, gpt_params & params);

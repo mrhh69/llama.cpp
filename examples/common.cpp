@@ -15,6 +15,9 @@
  #include <alloca.h>
  #endif
 
+
+#define NEXT_ARG() if (++i >= argc) {invalid_param = true;break;}
+
 bool gpt_params_parse(int argc, char ** argv, gpt_params & params) {
     // determine sensible default number of threads.
     // std::thread::hardware_concurrency may not be equal to the number of cores, or may return 0.
@@ -28,86 +31,52 @@ bool gpt_params_parse(int argc, char ** argv, gpt_params & params) {
         arg = argv[i];
 
         if (arg == "-s" || arg == "--seed") {
-            if (++i >= argc) {
-                invalid_param = true;
-                break;
-            }
+            NEXT_ARG();
             params.seed = std::stoi(argv[i]);
         } else if (arg == "-t" || arg == "--threads") {
-            if (++i >= argc) {
-                invalid_param = true;
-                break;
-            }
+            NEXT_ARG();
             params.n_threads = std::stoi(argv[i]);
         } else if (arg == "-n" || arg == "--n_predict") {
-            if (++i >= argc) {
-                invalid_param = true;
-                break;
-            }
+            NEXT_ARG();
             params.n_predict = std::stoi(argv[i]);
         } else if (arg == "--top_k") {
-            if (++i >= argc) {
-                invalid_param = true;
-                break;
-            }
+            NEXT_ARG();
             params.top_k = std::stoi(argv[i]);
         } else if (arg == "-c" || arg == "--ctx_size") {
-            if (++i >= argc) {
-                invalid_param = true;
-                break;
-            }
+            NEXT_ARG();
             params.n_ctx = std::stoi(argv[i]);
         } else if (arg == "--memory_f32") {
             params.memory_f16 = false;
         } else if (arg == "--top_p") {
-            if (++i >= argc) {
-                invalid_param = true;
-                break;
-            }
+            NEXT_ARG();
             params.top_p = std::stof(argv[i]);
         } else if (arg == "--temp") {
-            if (++i >= argc) {
-                invalid_param = true;
-                break;
-            }
+            NEXT_ARG();
             params.temp = std::stof(argv[i]);
         } else if (arg == "--repeat_last_n") {
-            if (++i >= argc) {
-                invalid_param = true;
-                break;
-            }
+            NEXT_ARG();
             params.repeat_last_n = std::stoi(argv[i]);
         } else if (arg == "--repeat_penalty") {
-            if (++i >= argc) {
-                invalid_param = true;
-                break;
-            }
+            NEXT_ARG();
             params.repeat_penalty = std::stof(argv[i]);
         } else if (arg == "-m" || arg == "--model") {
-            if (++i >= argc) {
-                invalid_param = true;
-                break;
-            }
+            NEXT_ARG();
             params.model = argv[i];
         } else if (arg == "--embedding") {
             params.embedding = true;
         } else if (arg == "--mlock") {
             params.use_mlock = true;
         } else if (arg == "--n_parts") {
-            if (++i >= argc) {
-                invalid_param = true;
-                break;
-            }
+            NEXT_ARG();
             params.n_parts = std::stoi(argv[i]);
         } else if (arg == "-h" || arg == "--help") {
             gpt_print_usage(argc, argv, params);
             exit(0);
         } else if (arg == "--in-prefix") {
-            if (++i >= argc) {
-                invalid_param = true;
-                break;
-            }
+            NEXT_ARG();
             params.input_prefix = argv[i];
+        } else if (arg == "--always_reload") {
+          params.always_reload = true;
         } else {
             fprintf(stderr, "error: unknown argument: %s\n", arg.c_str());
             gpt_print_usage(argc, argv, params);
