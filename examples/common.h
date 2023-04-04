@@ -36,6 +36,7 @@ struct gpt_params {
 
     bool use_mlock         = false; // use mlock to keep model in memory
 
+    // for server mode:
     bool always_reload     = false; // load ctx within the request handler, rather than at server start
 };
 

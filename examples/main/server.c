@@ -26,6 +26,11 @@ void new_token_str(const char *s) {
 }
 
 
+void handler_cleanup(int sig) {
+	printf("sig: %i\n", sig);
+	close(cur_sock);
+	exit(0);
+}
 
 
 static void accepthandler(int sock) {
