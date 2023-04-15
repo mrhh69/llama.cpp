@@ -1,3 +1,8 @@
+// Defines sigaction on msys:
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
 #include "common.h"
 #include "llama.h"
 
@@ -23,15 +28,16 @@ static std::vector<llama_token> inp_sfx;
 
 
 static void model_load () {
-	auto lparams = llama_context_default_params();
+    auto lparams = llama_context_default_params();
 
-	lparams.n_ctx	  = params.n_ctx;
-	lparams.n_parts	= params.n_parts;
-	lparams.seed	   = params.seed;
-	lparams.f16_kv	 = params.memory_f16;
-	lparams.use_mlock  = params.use_mlock;
+    lparams.n_ctx      = params.n_ctx;
+    lparams.n_parts    = params.n_parts;
+    lparams.seed       = params.seed;
+    lparams.f16_kv     = params.memory_f16;
+    lparams.use_mmap   = params.use_mmap;
+    lparams.use_mlock  = params.use_mlock;
 
-	ctx = llama_init_from_file(params.model.c_str(), lparams);
+    ctx = llama_init_from_file(params.model.c_str(), lparams);
 
 	if (ctx == NULL) {
 		fprintf(stderr, "%s: error: failed to load model '%s'\n", __func__, params.model.c_str());
@@ -185,12 +191,12 @@ int main(int argc, char ** argv) {
 		model_load();
 	}
 
-	// print system information
-	{
-		fprintf(stderr, "\n");
-		fprintf(stderr, "system_info: n_threads = %d / %d | %s\n",
-				params.n_threads, std::thread::hardware_concurrency(), llama_print_system_info());
-	}
+    // print system information
+    {
+        fprintf(stderr, "\n");
+        fprintf(stderr, "system_info: n_threads = %d / %d | %s\n",
+                params.n_threads, std::thread::hardware_concurrency(), llama_print_system_info());
+    }
 
 	/* infinite server loop */
 	server_loop();

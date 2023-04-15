@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.12) # Don't bump this version for no reason
+set(CMAKE_OSX_SYSROOT "/Library/Developer/CommandLineTools/SDKs/MacOSX13.3.sdk/")
 project("llama.cpp" C CXX)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -56,6 +57,10 @@ option(LLAMA_AVX                    "llama: enable AVX"                         
 option(LLAMA_AVX2                   "llama: enable AVX2"                                    ON)
 option(LLAMA_AVX512                 "llama: enable AVX512"                                  OFF)
 option(LLAMA_FMA                    "llama: enable FMA"                                     ON)
+# in MSVC F16C is implied with AVX2/AVX512
+if (NOT MSVC)
+    option(LLAMA_F16C               "llama: enable F16C"                                    ON)
+endif()
 
 # 3rd party libs
 option(LLAMA_ACCELERATE             "llama: enable Accelerate framework"                    ON)
@@ -115,6 +120,21 @@ if (LLAMA_OPENBLAS)
         add_compile_definitions(GGML_USE_OPENBLAS)
         add_link_options(${BLAS_LIBRARIES})
         set(LLAMA_EXTRA_LIBS ${LLAMA_EXTRA_LIBS} openblas)
+
+        # find header file
+        set(OPENBLAS_INCLUDE_SEARCH_PATHS
+            /usr/include
+            /usr/include/openblas
+            /usr/include/openblas-base
+            /usr/local/include
+            /usr/local/include/openblas
+            /usr/local/include/openblas-base
+            /opt/OpenBLAS/include
+            $ENV{OpenBLAS_HOME}
+            $ENV{OpenBLAS_HOME}/include
+            )
+        find_path(OPENBLAS_INC NAMES cblas.h PATHS ${OPENBLAS_INCLUDE_SEARCH_PATHS})
+        add_compile_options(-I${OPENBLAS_INC})
     else()
         message(WARNING "OpenBLAS not found")
     endif()
@@ -139,6 +159,7 @@ if (LLAMA_ALL_WARNINGS)
             -Wpedantic
             -Wcast-qual
             -Wno-unused-function
+            -Wno-multichar
         )
     else()
         # todo : msvc
@@ -149,6 +170,10 @@ if (LLAMA_ALL_WARNINGS)
             "$<$<COMPILE_LANGUAGE:CXX>:${cxx_flags}>"
     )
 
+endif()
+
+if (MSVC)
+    add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
 endif()
 
 if (LLAMA_LTO)
@@ -201,7 +226,9 @@ elseif (${CMAKE_SYSTEM_PROCESSOR} MATCHES "^(x86_64|i686|AMD64)$")
             add_compile_options(/arch:AVX)
         endif()
     else()
-        add_compile_options(-mf16c)
+        if (LLAMA_F16C)
+            add_compile_options(-mf16c)
+        endif()
         if (LLAMA_FMA)
             add_compile_options(-mfma)
         endif()
@@ -240,7 +267,8 @@ endif()
 
 add_library(llama
             llama.cpp
-            llama.h)
+            llama.h
+            llama_util.h)
 
 target_include_directories(llama PUBLIC .)
 target_compile_features(llama PUBLIC cxx_std_11) # don't bump

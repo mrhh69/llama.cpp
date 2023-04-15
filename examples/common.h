@@ -34,6 +34,7 @@ struct gpt_params {
 
     bool embedding         = false; // get only sentence embedding
 
+    bool use_mmap          = true;  // use mmap for faster loads
     bool use_mlock         = false; // use mlock to keep model in memory
 
     // for server mode:

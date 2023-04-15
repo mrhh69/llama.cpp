@@ -1,4 +1,6 @@
 #include "ggml.h"
+
+#define LLAMA_API_INTERNAL
 #include "llama.h"
 
 #include <algorithm>
@@ -13,9 +15,6 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-
-static const char * type_strs[] = { "q4_0", "q4_1", "i8", "i16", "i32", "f16", "f32"  };
-static_assert(sizeof(type_strs) == GGML_TYPE_COUNT * sizeof(char *), "Incomplete type list");
 
 struct quantize_stats_params {
     std::string model = "models/7B/ggml-model-f16.bin";
@@ -222,7 +221,7 @@ int main(int argc, char ** argv) {
                 break;
             }
             int j;
-            for (j = 0; j < GGML_TYPE_COUNT && strcmp(argv[i], type_strs[j]) != 0; j++) {
+            for (j = 0; j < GGML_TYPE_COUNT && strcmp(argv[i], ggml_type_name((ggml_type) i)) != 0; j++) {
                 // find match
             }
             if (j < GGML_TYPE_COUNT) {
@@ -266,20 +265,18 @@ int main(int argc, char ** argv) {
         }
     }
 
-    // Sort tensors for consistent output
-    const auto tensors = llama_internal_get_tensor_map(ctx);
-    std::map<std::string, struct ggml_tensor *> tensors_sorted { tensors.begin(), tensors.end() };
+    const auto &tensors = llama_internal_get_tensor_map(ctx);
 
     // check layer tensors
     int included_layers = 0;
     int64_t max_nelements = 0;
     bool is_f16 = false;
-    for (const auto& kv_tensor : tensors_sorted) {
+    for (const auto& kv_tensor : tensors) {
         if (!layer_included(params, kv_tensor.first)) {
             continue;
         }
         if (params.verbose) {
-            printf("%s: type %s, size %" PRId64 "\n", kv_tensor.first.c_str(), type_strs[kv_tensor.second->type], ggml_nelements(kv_tensor.second));
+            printf("%s: type %s, size %" PRId64 "\n", kv_tensor.first.c_str(), ggml_type_name(kv_tensor.second->type), ggml_nelements(kv_tensor.second));
         }
         if (kv_tensor.second->type == GGML_TYPE_F16) {
             is_f16 = true;
@@ -304,25 +301,26 @@ int main(int argc, char ** argv) {
 
     // loop throught quantization types
     for (int i = 0; i < GGML_TYPE_COUNT; i++) {
+        const ggml_type type = (ggml_type) i;
         if (!params.include_types.empty() && std::find(params.include_types.begin(), params.include_types.end(), i) == params.include_types.end()) {
             continue;
         }
         quantize_fns_t qfns = ggml_internal_get_quantize_fn(i);
         if (qfns.quantize_row_q && qfns.dequantize_row_q) {
             if (params.verbose) {
-                printf("testing %s ...\n",  type_strs[i]);
+                printf("testing %s ...\n",  ggml_type_name(type));
             }
 
             error_stats global_stats {};
 
-            for (const auto& kv_tensor : tensors_sorted) {
+            for (const auto& kv_tensor : tensors) {
                 if (!layer_included(params, kv_tensor.first)) {
                     continue;
                 }
                 if (params.verbose) {
                     printf("  %s ...\n",  kv_tensor.first.c_str());
                 }
-                std::string layer_name { type_strs[i] };
+                std::string layer_name { ggml_type_name(type) };
                 layer_name += "::" + kv_tensor.first;
                 test_roundtrip_on_layer(
                         layer_name,
@@ -337,7 +335,7 @@ int main(int argc, char ** argv) {
                 );
             }
 
-            print_error_stats(type_strs[i], global_stats, params.print_histogram);
+            print_error_stats(ggml_type_name(type), global_stats, params.print_histogram);
         }
     }
 

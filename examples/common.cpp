@@ -1,19 +1,11 @@
 #include "common.h"
 
-#include "ggml.h"
-
 #include <cassert>
 #include <cstring>
 #include <fstream>
 #include <string>
 #include <iterator>
 #include <algorithm>
-
- #if defined(_MSC_VER) || defined(__MINGW32__)
- #include <malloc.h> // using malloc.h with MSC/MINGW
- #elif !defined(__FreeBSD__) && !defined(__NetBSD__) && !defined(__OpenBSD__)
- #include <alloca.h>
- #endif
 
 
 #define NEXT_ARG() if (++i >= argc) {invalid_param = true;break;}
@@ -68,6 +60,8 @@ bool gpt_params_parse(int argc, char ** argv, gpt_params & params) {
             params.embedding = true;
         } else if (arg == "--mlock") {
             params.use_mlock = true;
+        } else if (arg == "--no-mmap") {
+            params.use_mmap = false;
         } else if (arg == "--n_parts") {
             NEXT_ARG();
             params.n_parts = std::stoi(argv[i]);
@@ -112,9 +106,11 @@ void gpt_print_usage(int /*argc*/, char ** argv, const gpt_params & params) {
     fprintf(stderr, "  --memory_f32          use f32 instead of f16 for memory key+value\n");
     fprintf(stderr, "  --temp N              temperature (default: %.1f)\n", params.temp);
     fprintf(stderr, "  --n_parts N           number of model parts (default: -1 = determine from dimensions)\n");
-    fprintf(stderr, "  --keep                number of tokens to keep from the initial prompt\n");
-    if (ggml_mlock_supported()) {
+    if (llama_mlock_supported()) {
         fprintf(stderr, "  --mlock               force system to keep model in RAM rather than swapping or compressing\n");
+    }
+    if (llama_mmap_supported()) {
+        fprintf(stderr, "  --no-mmap             do not memory-map model (slower load but may reduce pageouts if not using mlock)\n");
     }
     fprintf(stderr, "  -m FNAME, --model FNAME\n");
     fprintf(stderr, "                        model path (default: %s)\n", params.model.c_str());

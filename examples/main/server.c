@@ -61,7 +61,7 @@ void cleanup(int s) {
 }
 
 // returns 0 if a connection is ready
-static int idle() {
+static int idle(void) {
 	struct timeval tv = {IDLE_WAIT_S, IDLE_WAIT_US};
 	fd_set set;
 	FD_ZERO(&set);
