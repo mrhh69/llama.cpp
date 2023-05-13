@@ -19,11 +19,24 @@ int cur_pid;
 
 
 
+char * sock_readline(void) {
+	printf("reading sockline\n");
+	char * buf = malloc(1024); // memory leaks galore lmfao
+	int i = 0;
+	do {
+		read(cur_sock, &buf[i], 1);
+	} while(buf[i++] != '\n');
+	printf("read done\n");
+
+	return buf;
+}
+
 void new_token_str(const char *s) {
 	//printf("%s", s);
 	//fflush(stdout);
 	write(cur_sock, s, strlen(s));
 }
+
 
 
 void handler_cleanup(int sig) {

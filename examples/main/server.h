@@ -16,6 +16,7 @@
 extern "C" {
 #endif
 
+extern char * sock_readline(void);
 extern void new_token_str(const char *);
 extern void server_loop(void);
 extern void process(char *);

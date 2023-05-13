@@ -1,13 +1,38 @@
 *.o
 *.a
 .DS_Store
+<<<<<<< HEAD
 
+=======
+.build/
+.cache/
+.direnv/
+.envrc
+.swiftpm
+.venv
+.vs/
+.vscode/
+
+build/
+build-em/
+build-debug/
+build-release/
+build-static/
+build-cublas/
+build-opencl/
+build-no-accel/
+build-sanitize-addr/
+build-sanitize-thread/
+
+>>>>>>> 08737ef720f0510c7ec2aa84d7f70c691073c35d
 models/*
+*.bin
 
 bin/*
 /main
 /quantize
 /quantize-stats
+<<<<<<< HEAD
 
 compile_commands.json
 
@@ -15,3 +40,26 @@ CMakeFiles/
 *.cmake
 CMakeCache.txt
 Makefile
+=======
+/result
+/perplexity
+/embedding
+/benchmark-matmult
+/vdot
+/Pipfile
+
+build-info.h
+arm_neon.h
+compile_commands.json
+
+__pycache__
+
+zig-out/
+zig-cache/
+
+ppl-*.txt
+qnt-*.txt
+perf-*.txt
+
+examples/jeopardy/results.txt
+>>>>>>> 08737ef720f0510c7ec2aa84d7f70c691073c35d
